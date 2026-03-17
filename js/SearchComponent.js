@@ -1,8 +1,3 @@
-import SearchComponent from "./SearchComponent.js";
-
-const app = new SearchComponent();
-app.init();
-
 export default class SearchComponent {
 
   constructor(){
@@ -13,4 +8,22 @@ export default class SearchComponent {
     console.log("App started");
   }
 
+}
+constructor(){
+  this.input = document.getElementById("searchBox");
+  this.timer = null;
+}
+
+init(){
+  this.input.addEventListener("input", (e)=> this.handleInput(e));
+}
+
+handleInput(e){
+  const query = e.target.value;
+
+  clearTimeout(this.timer);
+
+  this.timer = setTimeout(()=>{
+    console.log("Searching:", query);
+  },300);
 }
