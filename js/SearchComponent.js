@@ -1,47 +1,43 @@
 export default class SearchComponent {
 
   constructor(){
+
+    this.apiKey = "YOUR_API_KEY";
+
     this.input = document.getElementById("searchBox");
+    this.resultList = document.getElementById("results");
+    
+
+    this.timer = null;
+
   }
 
   init(){
-    console.log("App started");
+    this.input.addEventListener("input", (e)=> this.handleInput(e));
   }
 
-}
-constructor(){
-  this.input = document.getElementById("searchBox");
-  this.timer = null;
-}
+  handleInput(e){
 
-init(){
-  this.input.addEventListener("input", (e)=> this.handleInput(e));
-}
+    const query = e.target.value;
 
-handleInput(e){
-  const query = e.target.value;
+    clearTimeout(this.timer);
 
-  clearTimeout(this.timer);
+   
 
-  this.timer = setTimeout(()=>{
-    console.log("Searching:", query);
-  },300);
-}
-constructor(){
-  this.input = document.getElementById("searchBox");
-  this.timer = null;
+    this.timer = setTimeout(()=>{
+      this.search(query);
+    },300);
+
+  }
+
+  async search(query){
+  const res = await fetch(
+    `https://api.themoviedb.org/3/search/movie?api_key=${this.apiKey}&query=${query}`
+  );
+  const data = await res.json();
+  console.log(data);
 }
 
-init(){
-  this.input.addEventListener("input", (e)=> this.handleInput(e));
-}
+  }
 
-handleInput(e){
-  const query = e.target.value;
-
-  clearTimeout(this.timer);
-
-  this.timer = setTimeout(()=>{
-    console.log("Searching:", query);
-  },300);
-}
+  
