@@ -6,7 +6,8 @@ export default class SearchComponent {
 
     this.input = document.getElementById("searchBox");
     this.resultList = document.getElementById("results");
-    
+    this.message = document.getElementById("message");
+    this.app = document.getElementById("app");
 
     this.timer = null;
 
@@ -18,11 +19,14 @@ export default class SearchComponent {
 
   handleInput(e){
 
-    const query = e.target.value;
+    const query = e.target.value.trim();
 
     clearTimeout(this.timer);
 
-   
+    if(!query){
+      this.clearResults();
+      return;
+    }
 
     this.timer = setTimeout(()=>{
       this.search(query);
@@ -31,23 +35,57 @@ export default class SearchComponent {
   }
 
   async search(query){
-  const res = await fetch(
-    `https://api.themoviedb.org/3/search/movie?api_key=${this.apiKey}&query=${query}`
-  );
-  const data = await res.json();
-  console.log(data);
 
-  this.renderResults(data.results);
-}
+    this.app.dataset.loading = "true";
+    this.message.textContent = "";
 
+    try{
 
-renderResults(results){
-  this.resultList.innerHTML = "";
+      const res = await fetch(
+        `https://api.themoviedb.org/3/search/movie?api_key=${this.apiKey}&query=${query}`
+      );
 
-  results.forEach(movie => {
-    const li = document.createElement("li");
-    li.textContent = movie.title;
-    this.resultList.appendChild(li);
-  });
-}
+      const data = await res.json();
+
+      if(data.results.length === 0){
+        this.showMessage("No movies found.");
+      }
+
+      this.renderResults(data.results);
+
+    }catch(err){
+
+      this.showMessage("Error fetching data.");
+      console.error(err);
+
+    }finally{
+
+      this.app.dataset.loading = "false";
+
+    }
+
   }
+
+  renderResults(results){
+
+    this.resultList.innerHTML = "";
+
+    results.forEach(movie => {
+      const li = document.createElement("li");
+      li.textContent = movie.title;
+      this.resultList.appendChild(li);
+    });
+
+  }
+
+  clearResults(){
+    this.resultList.innerHTML = "";
+    this.message.textContent = "";
+  }
+
+  showMessage(msg){
+    this.resultList.innerHTML = "";
+    this.message.textContent = msg;
+  }
+
+}

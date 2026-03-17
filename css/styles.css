@@ -7,3 +7,27 @@ body {
   width: 100%;
   padding: 10px;
 }
+
+#results {
+  list-style: none;
+  padding: 0;
+}
+
+#results li {
+  padding: 8px;
+  border-bottom: 1px solid #ccc;
+}
+
+.spinner {
+  display: none;
+  margin-top: 10px;
+}
+
+[data-loading="true"] .spinner {
+  display: block;
+}
+
+#message {
+  margin-top: 10px;
+  color: #555;
+}
