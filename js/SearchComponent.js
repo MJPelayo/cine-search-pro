@@ -36,8 +36,18 @@ export default class SearchComponent {
   );
   const data = await res.json();
   console.log(data);
+
+  this.renderResults(data.results);
 }
 
-  }
 
-  
+renderResults(results){
+  this.resultList.innerHTML = "";
+
+  results.forEach(movie => {
+    const li = document.createElement("li");
+    li.textContent = movie.title;
+    this.resultList.appendChild(li);
+  });
+}
+  }
