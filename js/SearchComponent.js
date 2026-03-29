@@ -18,6 +18,39 @@ constructor(){
   this.currentIndex = -1;
 }
 
+buildHighlight(title, query) {
+  const container = document.createElement("span");
+  
+  // Case-insensitive search
+  const lowerTitle = title.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const idx = lowerTitle.indexOf(lowerQuery);
+  
+  // If no match, return plain text
+  if (idx === -1) {
+    container.textContent = title;
+    return container;
+  }
+  
+  // Create text before match
+  const before = document.createTextNode(title.slice(0, idx));
+  
+  // Create highlighted span
+  const match = document.createElement("span");
+  match.className = "highlight";
+  match.textContent = title.slice(idx, idx + query.length);
+  
+  // Create text after match
+  const after = document.createTextNode(title.slice(idx + query.length));
+  
+  // Assemble
+  container.appendChild(before);
+  container.appendChild(match);
+  container.appendChild(after);
+  
+  return container;
+}
+
  init(){
   this.input.addEventListener("input", (e) => {
     const query = e.target.value.trim();
@@ -110,18 +143,21 @@ async search(query){
     return;
   }
 
-  // ========== DOCUMENT FRAGMENT PATTERN ==========
+  // Document Fragment Pattern
   const frag = new DocumentFragment();
 
   movies.forEach(movie => {
     // Clone template content
     const clone = this.template.content.cloneNode(true);
     
-    // Find title element and set text content
+    // Find title element
     const titleEl = clone.querySelector(".title");
-    titleEl.textContent = movie.title;  // Plain text for now
     
-    // Store movie ID on the li for later
+    // SAFE HIGHLIGHT - using DOM API, NOT innerHTML
+    const highlightedTitle = this.buildHighlight(movie.title, query);
+    titleEl.appendChild(highlightedTitle);
+    
+    // Store movie ID for later use
     const li = clone.querySelector(".movie-item");
     li.dataset.id = movie.id;
     

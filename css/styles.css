@@ -31,3 +31,7 @@ body {
   margin-top: 10px;
   color: #555;
 }
+.highlight {
+  background-color: yellow;
+  font-weight: bold;
+}
