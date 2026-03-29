@@ -1,59 +1,44 @@
 export default class SearchComponent {
 
-  constructor(){
+constructor(){
+  this.apiKey = "YOUR_API_KEY";
 
-    this.apiKey = "YOUR_API_KEY";
+  this.input = document.getElementById("searchBox");
+  this.resultList = document.getElementById("results");
+  this.message = document.getElementById("message");
+  this.app = document.getElementById("app");
+  this.template = document.getElementById("movie-template");
 
-    this.input = document.getElementById("searchBox");
-    this.resultList = document.getElementById("results");
-    this.message = document.getElementById("message");
-    this.app = document.getElementById("app");
+  // State variables
+  this.debounceTimer = null;      
+  this.cache = new Map();         
+  this.controller = null;         
+  
+  // For keyboard navigation 
+  this.currentIndex = -1;
+}
 
-    this.timer = null;
-    // Debounce
-    this.debounceTimer = null;
-
-     // Cache
-     this.cache = new Map();
-
-    // AbortController
-    this.controller = null;
-
-  }
-
-  init(){
-   this.input.addEventListener("input", (e) => {
-  const query = e.target.value.trim();
-
-  clearTimeout(this.debounceTimer);
-
-  this.debounceTimer = setTimeout(() => {
-    if (query) {
-      this.search(query);
-    } else {
-      this.clearResults();
-    }
-  }, 300);
-});
-
-  }
-
-  handleInput(e){
-
+ init(){
+  this.input.addEventListener("input", (e) => {
     const query = e.target.value.trim();
 
-    clearTimeout(this.timer);
+    // Clear previous timer
+    clearTimeout(this.debounceTimer);
 
-    if(!query){
+    // If empty query, clear results immediately
+    if (!query) {
       this.clearResults();
       return;
     }
 
-    this.timer = setTimeout(()=>{
+    // Set new timer
+    this.debounceTimer = setTimeout(() => {
       this.search(query);
-    },300);
+    }, 300);
+  });
+}
 
-  }
+ 
 
   async search(query){
 
@@ -100,9 +85,9 @@ export default class SearchComponent {
   }
 
   clearResults(){
-    this.resultList.innerHTML = "";
-    this.message.textContent = "";
-  }
+  this.resultList.innerHTML = "";
+  this.message.textContent = "";
+}
 
   showMessage(msg){
     this.resultList.innerHTML = "";
