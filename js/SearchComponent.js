@@ -47,6 +47,17 @@ async search(query){
     return;
   }
 
+  // ========== ABORT CONTROLLER ==========
+  // Cancel any in-flight request
+  if (this.controller) {
+    console.log("Cancelling previous request");
+    this.controller.abort();
+  }
+
+  // Create new controller for this request
+  this.controller = new AbortController();
+  const signal = this.controller.signal;
+
   console.log("CACHE MISS - Fetching from API");
 
   // Show loading spinner
@@ -55,7 +66,8 @@ async search(query){
 
   try{
     const res = await fetch(
-      `https://api.themoviedb.org/3/search/movie?api_key=${this.apiKey}&query=${encodeURIComponent(query)}`
+      `https://api.themoviedb.org/3/search/movie?api_key=${this.apiKey}&query=${encodeURIComponent(query)}`,
+      { signal }  // ← PASS THE SIGNAL FOR CANCELLATION
     );
 
     if (!res.ok) {
@@ -68,17 +80,17 @@ async search(query){
       this.showMessage("No movies found.");
       this.renderResults([], query);
     } else {
-      // ========== STORE IN CACHE ==========
+      // Store in cache
       this.cache.set(query, data.results);
       console.log(`Cached "${query}" - ${data.results.length} movies`);
       this.renderResults(data.results, query);
     }
 
   } catch(err){
-    // Handle AbortError separately
+    // ========== HANDLE ABORT ERROR ==========
     if (err.name === "AbortError") {
-      console.log("Request cancelled");
-      return;
+      console.log("Request was cancelled - this is expected during fast typing");
+      return;  // Don't show error message for cancellations
     }
     
     this.showMessage("Error fetching data.");
@@ -86,6 +98,7 @@ async search(query){
 
   } finally{
     this.app.dataset.loading = "false";
+    // Don't clear controller here - it might be needed for next request
   }
 }
 
