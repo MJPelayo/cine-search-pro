@@ -10,11 +10,32 @@ export default class SearchComponent {
     this.app = document.getElementById("app");
 
     this.timer = null;
+    // Debounce
+    this.debounceTimer = null;
+
+     // Cache
+     this.cache = new Map();
+
+    // AbortController
+    this.controller = null;
 
   }
 
   init(){
-    this.input.addEventListener("input", (e)=> this.handleInput(e));
+   this.input.addEventListener("input", (e) => {
+  const query = e.target.value.trim();
+
+  clearTimeout(this.debounceTimer);
+
+  this.debounceTimer = setTimeout(() => {
+    if (query) {
+      this.search(query);
+    } else {
+      this.clearResults();
+    }
+  }, 300);
+});
+
   }
 
   handleInput(e){
