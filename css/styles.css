@@ -35,3 +35,18 @@ body {
   background-color: yellow;
   font-weight: bold;
 }
+
+.movie-item.active {
+  background-color: #e0e0e0;
+  border-left: 4px solid #007bff;
+  cursor: pointer;
+}
+
+.movie-item {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.movie-item:hover {
+  background-color: #f5f5f5;
+}

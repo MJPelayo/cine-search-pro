@@ -52,7 +52,8 @@ buildHighlight(title, query) {
 }
 
  init(){
-  this.input.addEventListener("input", (e) => {
+ this.input.addEventListener("input", (e) => {
+
     const query = e.target.value.trim();
 
     // Clear previous timer
@@ -69,6 +70,51 @@ buildHighlight(title, query) {
       this.search(query);
     }, 300);
   });
+    // ========== ADD KEYBOARD NAVIGATION ==========
+  this.input.addEventListener("keydown", (e) => this.handleKeydown(e));
+}
+
+handleKeydown(e) {
+  const items = this.resultList.querySelectorAll(".movie-item");
+  
+  if (!items.length) return;
+
+  switch (e.key) {
+    case "ArrowDown":
+      e.preventDefault();
+      this.currentIndex = (this.currentIndex + 1) % items.length;
+      this.updateActiveItem(items);
+      break;
+      
+    case "ArrowUp":
+      e.preventDefault();
+      this.currentIndex = (this.currentIndex - 1 + items.length) % items.length;
+      this.updateActiveItem(items);
+      break;
+      
+    case "Enter":
+      e.preventDefault();
+      if (this.currentIndex >= 0 && items[this.currentIndex]) {
+        const movieId = items[this.currentIndex].dataset.id;
+        this.selectMovie(movieId);
+      }
+      break;
+      
+    default:
+      break;
+  }
+}
+
+updateActiveItem(items) {
+  // Remove active class from all items
+  items.forEach(item => item.classList.remove("active"));
+  
+  // Add active class to current item
+  if (this.currentIndex >= 0 && items[this.currentIndex]) {
+    items[this.currentIndex].classList.add("active");
+    // Optional: scroll into view
+    items[this.currentIndex].scrollIntoView({ block: "nearest" });
+  }
 }
 
 async search(query){
@@ -139,6 +185,9 @@ async search(query){
   // Clear previous results
   this.resultList.innerHTML = "";
 
+  // ========== RESET KEYBOARD NAVIGATION STATE ==========
+  this.currentIndex = -1;
+
   if (!movies || movies.length === 0) {
     return;
   }
@@ -166,6 +215,12 @@ async search(query){
 
   // ONE DOM WRITE
   this.resultList.appendChild(frag);
+}
+
+selectMovie(movieId) {
+  console.log(`Selected movie ID: ${movieId}`);
+  // For now, just show an alert to test keyboard navigation
+  alert(`Movie ID ${movieId} selected - detail panel coming in Phase 3`);
 }
 
   clearResults(){
