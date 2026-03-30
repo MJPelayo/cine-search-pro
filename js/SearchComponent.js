@@ -1,236 +1,208 @@
 export default class SearchComponent {
 
-constructor(){
-  this.apiKey = "fe875da85ffa0a6908e4d6fcbf897c80"; // Replace with your TMDb API key
+  constructor() {
+    // Replace with your TMDB API key
+    this.apiKey = "fe875da85ffa0a6908e4d6fcbf897c80";
 
-  this.input = document.getElementById("searchBox");
-  this.resultList = document.getElementById("results");
-  this.message = document.getElementById("message");
-  this.app = document.getElementById("app");
-  this.template = document.getElementById("movie-template");
+    // DOM Elements
+    this.input = document.getElementById("searchBox");
+    this.resultList = document.getElementById("results");
+    this.message = document.getElementById("message");
+    this.app = document.getElementById("app");
+    this.template = document.getElementById("movie-template");
 
-  // State variables
-  this.debounceTimer = null;      
-  this.cache = new Map();         
-  this.controller = null;         
-  
-  // For keyboard navigation 
-  this.currentIndex = -1;
-}
-
-buildHighlight(title, query) {
-  const container = document.createElement("span");
-  
-  // Case-insensitive search
-  const lowerTitle = title.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  const idx = lowerTitle.indexOf(lowerQuery);
-  
-  // If no match, return plain text
-  if (idx === -1) {
-    container.textContent = title;
-    return container;
+    // State variables
+    this.debounceTimer = null;
+    this.cache = new Map();
+    this.controller = null;
+    this.currentIndex = -1;
   }
-  
-  // Create text before match
-  const before = document.createTextNode(title.slice(0, idx));
-  
-  // Create highlighted span
-  const match = document.createElement("span");
-  match.className = "highlight";
-  match.textContent = title.slice(idx, idx + query.length);
-  
-  // Create text after match
-  const after = document.createTextNode(title.slice(idx + query.length));
-  
-  // Assemble
-  container.appendChild(before);
-  container.appendChild(match);
-  container.appendChild(after);
-  
-  return container;
-}
 
- init(){
- this.input.addEventListener("input", (e) => {
+  init() {
+    // Input event with debounce
+    this.input.addEventListener("input", (e) => {
+      const query = e.target.value.trim();
 
-    const query = e.target.value.trim();
+      clearTimeout(this.debounceTimer);
 
-    // Clear previous timer
-    clearTimeout(this.debounceTimer);
+      if (!query) {
+        this.clearResults();
+        return;
+      }
 
-    // If empty query, clear results immediately
-    if (!query) {
-      this.clearResults();
+      this.debounceTimer = setTimeout(() => {
+        this.search(query);
+      }, 300);
+    });
+
+    // Keyboard navigation
+    this.input.addEventListener("keydown", (e) => this.handleKeydown(e));
+  }
+
+  async search(query) {
+    // Cache check
+    if (this.cache.has(query)) {
+      console.log("📦 CACHE HIT - No network request");
+      this.renderResults(this.cache.get(query), query);
+      this.app.dataset.loading = "false";
       return;
     }
 
-    // Set new timer
-    this.debounceTimer = setTimeout(() => {
-      this.search(query);
-    }, 300);
-  });
-    // ========== ADD KEYBOARD NAVIGATION ==========
-  this.input.addEventListener("keydown", (e) => this.handleKeydown(e));
-}
+    // Abort previous request
+    if (this.controller) {
+      console.log("🛑 Cancelling previous request");
+      this.controller.abort();
+    }
 
-handleKeydown(e) {
-  const items = this.resultList.querySelectorAll(".movie-item");
-  
-  if (!items.length) return;
+    // Create new controller
+    this.controller = new AbortController();
+    const signal = this.controller.signal;
 
-  switch (e.key) {
-    case "ArrowDown":
-      e.preventDefault();
-      this.currentIndex = (this.currentIndex + 1) % items.length;
-      this.updateActiveItem(items);
-      break;
-      
-    case "ArrowUp":
-      e.preventDefault();
-      this.currentIndex = (this.currentIndex - 1 + items.length) % items.length;
-      this.updateActiveItem(items);
-      break;
-      
-    case "Enter":
-      e.preventDefault();
-      if (this.currentIndex >= 0 && items[this.currentIndex]) {
-        const movieId = items[this.currentIndex].dataset.id;
-        this.selectMovie(movieId);
+    console.log("🌐 CACHE MISS - Fetching from API");
+
+    this.app.dataset.loading = "true";
+    this.message.textContent = "";
+
+    try {
+      const res = await fetch(
+        `https://api.themoviedb.org/3/search/movie?api_key=${this.apiKey}&query=${encodeURIComponent(query)}`,
+        { signal }
+      );
+
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
       }
-      break;
-      
-    default:
-      break;
-  }
-}
 
-updateActiveItem(items) {
-  // Remove active class from all items
-  items.forEach(item => item.classList.remove("active"));
-  
-  // Add active class to current item
-  if (this.currentIndex >= 0 && items[this.currentIndex]) {
-    items[this.currentIndex].classList.add("active");
-    // Optional: scroll into view
-    items[this.currentIndex].scrollIntoView({ block: "nearest" });
-  }
-}
+      const data = await res.json();
 
-async search(query){
-  // ========== CACHE CHECK FIRST ==========
-  if (this.cache.has(query)) {
-    console.log("CACHE HIT - No network request");
-    this.renderResults(this.cache.get(query), query);
-    this.app.dataset.loading = "false";
-    return;
+      if (data.results.length === 0) {
+        this.showMessage("No movies found.");
+        this.renderResults([], query);
+      } else {
+        this.cache.set(query, data.results);
+        console.log(`💾 Cached "${query}" - ${data.results.length} movies`);
+        this.renderResults(data.results, query);
+      }
+
+    } catch (err) {
+      if (err.name === "AbortError") {
+        console.log("⛔ Request was cancelled - this is expected during fast typing");
+        return;
+      }
+      this.showMessage("Error fetching data.");
+      console.error(err);
+    } finally {
+      this.app.dataset.loading = "false";
+    }
   }
 
-  // ========== ABORT CONTROLLER ==========
-  // Cancel any in-flight request
-  if (this.controller) {
-    console.log("Cancelling previous request");
-    this.controller.abort();
-  }
+  renderResults(movies, query) {
+    this.resultList.innerHTML = "";
+    this.currentIndex = -1;
 
-  // Create new controller for this request
-  this.controller = new AbortController();
-  const signal = this.controller.signal;
-
-  console.log("CACHE MISS - Fetching from API");
-
-  // Show loading spinner
-  this.app.dataset.loading = "true";
-  this.message.textContent = "";
-
-  try{
-    const res = await fetch(
-      `https://api.themoviedb.org/3/search/movie?api_key=${this.apiKey}&query=${encodeURIComponent(query)}`,
-      { signal }  // ← PASS THE SIGNAL FOR CANCELLATION
-    );
-
-    if (!res.ok) {
-      throw new Error(`API error: ${res.status}`);
+    if (!movies || movies.length === 0) {
+      return;
     }
 
-    const data = await res.json();
+    const frag = new DocumentFragment();
 
-    if(data.results.length === 0){
-      this.showMessage("No movies found.");
-      this.renderResults([], query);
-    } else {
-      // Store in cache
-      this.cache.set(query, data.results);
-      console.log(`Cached "${query}" - ${data.results.length} movies`);
-      this.renderResults(data.results, query);
-    }
+    movies.forEach(movie => {
+      const clone = this.template.content.cloneNode(true);
+      const titleEl = clone.querySelector(".title");
 
-  } catch(err){
-    // ========== HANDLE ABORT ERROR ==========
-    if (err.name === "AbortError") {
-      console.log("Request was cancelled - this is expected during fast typing");
-      return;  // Don't show error message for cancellations
-    }
-    
-    this.showMessage("Error fetching data.");
-    console.error(err);
+      // XSS-safe highlight
+      const highlightedTitle = this.buildHighlight(movie.title, query);
+      titleEl.appendChild(highlightedTitle);
 
-  } finally{
-    this.app.dataset.loading = "false";
-    // Don't clear controller here - it might be needed for next request
-  }
-}
+      const li = clone.querySelector(".movie-item");
+      li.dataset.id = movie.id;
 
- renderResults(movies, query){
-  // Clear previous results
-  this.resultList.innerHTML = "";
+      frag.appendChild(clone);
+    });
 
-  // ========== RESET KEYBOARD NAVIGATION STATE ==========
-  this.currentIndex = -1;
-
-  if (!movies || movies.length === 0) {
-    return;
+    this.resultList.appendChild(frag);
   }
 
-  // Document Fragment Pattern
-  const frag = new DocumentFragment();
+  buildHighlight(title, query) {
+    const container = document.createElement("span");
 
-  movies.forEach(movie => {
-    // Clone template content
-    const clone = this.template.content.cloneNode(true);
-    
-    // Find title element
-    const titleEl = clone.querySelector(".title");
-    
-    // SAFE HIGHLIGHT - using DOM API, NOT innerHTML
-    const highlightedTitle = this.buildHighlight(movie.title, query);
-    titleEl.appendChild(highlightedTitle);
-    
-    // Store movie ID for later use
-    const li = clone.querySelector(".movie-item");
-    li.dataset.id = movie.id;
-    
-    frag.appendChild(clone);
-  });
+    const lowerTitle = title.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+    const idx = lowerTitle.indexOf(lowerQuery);
 
-  // ONE DOM WRITE
-  this.resultList.appendChild(frag);
-}
+    if (idx === -1) {
+      container.textContent = title;
+      return container;
+    }
 
-selectMovie(movieId) {
-  console.log(`Selected movie ID: ${movieId}`);
-  // For now, just show an alert to test keyboard navigation
-  alert(`Movie ID ${movieId} selected - detail panel coming in Phase 3`);
-}
+    const before = document.createTextNode(title.slice(0, idx));
 
-  clearResults(){
-  this.resultList.innerHTML = "";
-  this.message.textContent = "";
-}
+    const match = document.createElement("span");
+    match.className = "highlight";
+    match.textContent = title.slice(idx, idx + query.length);
 
-  showMessage(msg){
+    const after = document.createTextNode(title.slice(idx + query.length));
+
+    container.appendChild(before);
+    container.appendChild(match);
+    container.appendChild(after);
+
+    return container;
+  }
+
+  handleKeydown(e) {
+    const items = this.resultList.querySelectorAll(".movie-item");
+
+    if (!items.length) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        this.currentIndex = (this.currentIndex + 1) % items.length;
+        this.updateActiveItem(items);
+        break;
+
+      case "ArrowUp":
+        e.preventDefault();
+        this.currentIndex = (this.currentIndex - 1 + items.length) % items.length;
+        this.updateActiveItem(items);
+        break;
+
+      case "Enter":
+        e.preventDefault();
+        if (this.currentIndex >= 0 && items[this.currentIndex]) {
+          const movieId = items[this.currentIndex].dataset.id;
+          this.selectMovie(movieId);
+        }
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  updateActiveItem(items) {
+    items.forEach(item => item.classList.remove("active"));
+
+    if (this.currentIndex >= 0 && items[this.currentIndex]) {
+      items[this.currentIndex].classList.add("active");
+      items[this.currentIndex].scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  selectMovie(movieId) {
+    console.log(`🎬 Selected movie ID: ${movieId}`);
+    // Phase 3 will implement concurrent fetching here
+    alert(`Movie ID ${movieId} selected - Phase 3 coming soon!`);
+  }
+
+  clearResults() {
+    this.resultList.innerHTML = "";
+    this.message.textContent = "";
+  }
+
+  showMessage(msg) {
     this.resultList.innerHTML = "";
     this.message.textContent = msg;
   }
-
 }
