@@ -3,60 +3,150 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cine Search Pro</title>
+  <title>CineSearch Pro | Find your next favorite movie</title>
   <link rel="stylesheet" href="css/styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-container">
+    <div class="logo">
+      <i class="fas fa-film"></i>
+      <span>Cine<span class="logo-highlight">Search</span> Pro</span>
+    </div>
+    <div class="nav-badge">
+      <i class="fas fa-tv"></i>
+      <span>TMDB Powered</span>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO SECTION -->
+<section class="hero">
+  <div class="hero-content">
+    <h1 class="hero-title">
+      <span class="hero-gradient">Search. Discover.</span>
+      <br>Watch instantly.
+    </h1>
+    <p class="hero-subtitle">Explore thousands of movies, get details, cast info, and trailers — all in one place.</p>
+  </div>
+  <div class="hero-wave">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120">
+      <path fill="#0f0f0f" fill-opacity="1" d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"></path>
+    </svg>
+  </div>
+</section>
+
+<!-- MAIN APP CONTAINER -->
 <div id="app" data-loading="false">
 
-<h1>Cine Search Pro</h1>
+  <!-- SEARCH SECTION -->
+  <div class="search-section">
+    <div class="search-container">
+      <div class="search-icon">
+        <i class="fas fa-search"></i>
+      </div>
+      <input 
+        type="text" 
+        id="searchBox" 
+        placeholder="Search for a movie... (e.g., Inception, Batman, Titanic)"
+        autocomplete="off"
+      />
+      <button id="clearSearchBtn" class="clear-btn" style="display: none;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <p class="search-hint">
+      <i class="fas fa-arrow-up"></i> <i class="fas fa-arrow-down"></i> Navigate &nbsp;|&nbsp;
+      <i class="fas fa-enter"></i> Select &nbsp;|&nbsp;
+      <i class="fas fa-times"></i> Close
+    </p>
+  </div>
 
-<input id="searchBox" placeholder="Search movies..." />
-
-<ul id="results"></ul>
-
-<template id="movie-template">
-  <li class="movie-item">
-    <span class="title"></span>
-  </li>
-</template>
-
-<p id="message"></p>
-
-<div class="spinner">Loading...</div>
-
-<!-- PHASE 3: DETAIL PANEL -->
-<div class="detail-panel" id="detailPanel" style="display: none;">
-  <div class="detail-header">
-    <h2 id="detailTitle">Movie Title</h2>
-    <button id="closeDetailBtn" class="close-btn">×</button>
+  <!-- RESULTS SECTION (GRID LAYOUT) -->
+  <div class="results-header">
+    <h2><i class="fas fa-clapperboard"></i> Movies</h2>
+    <span id="resultCount" class="result-count"></span>
   </div>
   
-  <div class="detail-content">
-    <div class="detail-section">
-      <h3>Overview</h3>
-      <p id="detailOverview"></p>
+  <ul id="results" class="movie-grid"></ul>
+
+  <template id="movie-template">
+    <li class="movie-card">
+      <div class="movie-poster">
+        <img class="poster-img" alt="Movie poster">
+        <div class="movie-overlay">
+          <button class="view-details-btn">
+            <i class="fas fa-info-circle"></i> View Details
+          </button>
+        </div>
+      </div>
+      <div class="movie-info">
+        <h3 class="movie-title"><span class="title"></span></h3>
+        <div class="movie-meta">
+          <span class="movie-year"></span>
+          <span class="movie-rating"><i class="fas fa-star"></i> <span class="rating-value"></span></span>
+        </div>
+      </div>
+    </li>
+  </template>
+
+  <!-- MESSAGE AREA -->
+  <div id="message" class="message-area"></div>
+
+  <!-- LOADING SPINNER -->
+  <div class="spinner-container">
+    <div class="spinner"></div>
+    <p>Searching movies...</p>
+  </div>
+
+</div>
+
+<!-- DETAIL PANEL (MODAL) -->
+<div class="detail-modal" id="detailPanel">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="detailTitle">Movie Title</h2>
+      <button id="closeDetailBtn" class="modal-close">&times;</button>
     </div>
-    
-    <div class="detail-section">
-      <h3>Genres</h3>
-      <div id="detailGenres"></div>
-    </div>
-    
-    <div class="detail-section">
-      <h3>Cast</h3>
-      <ul id="detailCast"></ul>
-    </div>
-    
-    <div class="detail-section">
-      <h3>Trailer</h3>
-      <div id="detailTrailer"></div>
+    <div class="modal-body">
+      <div class="modal-grid">
+        <div class="modal-poster">
+          <img id="detailPoster" alt="Movie poster">
+        </div>
+        <div class="modal-info">
+          <div class="detail-section">
+            <h3><i class="fas fa-align-left"></i> Overview</h3>
+            <p id="detailOverview"></p>
+          </div>
+          
+          <div class="detail-section">
+            <h3><i class="fas fa-tags"></i> Genres</h3>
+            <div id="detailGenres" class="genre-list"></div>
+          </div>
+          
+          <div class="detail-section">
+            <h3><i class="fas fa-users"></i> Top Cast</h3>
+            <ul id="detailCast" class="cast-list"></ul>
+          </div>
+        </div>
+      </div>
+      
+      <div class="detail-section trailer-section">
+        <h3><i class="fas fa-video"></i> Trailer</h3>
+        <div id="detailTrailer" class="trailer-container"></div>
+      </div>
     </div>
   </div>
 </div>
 
-</div>
+<footer class="footer">
+  <p>Powered by <span>The Movie Database (TMDB)</span></p>
+  <p class="footer-small">CineSearch Pro — For educational purposes only</p>
+</footer>
 
 <script type="module" src="js/app.js"></script>
 </body>
