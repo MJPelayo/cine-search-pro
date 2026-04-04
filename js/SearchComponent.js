@@ -11,6 +11,15 @@ export default class SearchComponent {
     this.app = document.getElementById("app");
     this.template = document.getElementById("movie-template");
 
+        // Detail panel elements (Phase 3)
+    this.detailPanel = document.getElementById("detailPanel");
+    this.detailTitle = document.getElementById("detailTitle");
+    this.detailOverview = document.getElementById("detailOverview");
+    this.detailGenres = document.getElementById("detailGenres");
+    this.detailCast = document.getElementById("detailCast");
+    this.detailTrailer = document.getElementById("detailTrailer");
+    this.closeDetailBtn = document.getElementById("closeDetailBtn");
+
     // State variables
     this.debounceTimer = null;
     this.cache = new Map();
@@ -37,6 +46,13 @@ export default class SearchComponent {
 
     // Keyboard navigation
     this.input.addEventListener("keydown", (e) => this.handleKeydown(e));
+
+        // Close detail panel when X is clicked (Phase 3)
+    if (this.closeDetailBtn) {
+      this.closeDetailBtn.addEventListener("click", () => {
+        this.closeDetailPanel();
+      });
+    }
   }
 
   async search(query) {
@@ -190,12 +206,34 @@ export default class SearchComponent {
     }
   }
 
-  selectMovie(movieId) {
+   selectMovie(movieId) {
     console.log(`🎬 Selected movie ID: ${movieId}`);
-    // Phase 3 will implement concurrent fetching here
-    alert(`Movie ID ${movieId} selected - Phase 3 coming soon!`);
+    
+    // Open the detail panel
+    this.openDetailPanel();
+    
+    // Phase 3 Step 3 will add concurrent fetching here
+    this.detailTitle.textContent = `Loading movie ${movieId}...`;
+  }
+  }
+  // ========== PHASE 3: DETAIL PANEL METHODS ==========
+
+  openDetailPanel() {
+    this.detailPanel.style.display = "block";
+    document.body.classList.add("detail-open");
   }
 
+  closeDetailPanel() {
+    this.detailPanel.style.display = "none";
+    document.body.classList.remove("detail-open");
+    
+    // Clear previous data
+    this.detailTitle.textContent = "Movie Title";
+    this.detailOverview.textContent = "";
+    this.detailGenres.innerHTML = "";
+    this.detailCast.innerHTML = "";
+    this.detailTrailer.innerHTML = "";
+  }
   clearResults() {
     this.resultList.innerHTML = "";
     this.message.textContent = "";
