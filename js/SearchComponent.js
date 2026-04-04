@@ -206,16 +206,73 @@ export default class SearchComponent {
     }
   }
 
-   selectMovie(movieId) {
+   async selectMovie(movieId) {
     console.log(`🎬 Selected movie ID: ${movieId}`);
     
     // Open the detail panel
     this.openDetailPanel();
     
-    // Phase 3 Step 3 will add concurrent fetching here
-    this.detailTitle.textContent = `Loading movie ${movieId}...`;
+    // Show loading state
+    this.detailTitle.textContent = "Loading movie...";
+    this.detailOverview.textContent = "Fetching data...";
+    this.detailGenres.innerHTML = "<li>Loading genres...</li>";
+    this.detailCast.innerHTML = "<li>Loading cast...</li>";
+    this.detailTrailer.innerHTML = "<p>Loading trailer...</p>";
+    
+    // Show loading spinner on app
+    this.app.dataset.loading = "true";
+    
+    // ========== CONCURRENT FETCHING WITH PROMISE.ALLSETTLED ==========
+    // Three endpoints to fetch simultaneously
+    const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${this.apiKey}`;
+    const creditsUrl = `https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${this.apiKey}`;
+    const videosUrl = `https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${this.apiKey}`;
+    
+    try {
+      // Fetch all three at the SAME TIME
+      const results = await Promise.allSettled([
+        fetch(detailsUrl).then(res => res.ok ? res.json() : Promise.reject(`HTTP ${res.status}`)),
+        fetch(creditsUrl).then(res => res.ok ? res.json() : Promise.reject(`HTTP ${res.status}`)),
+        fetch(videosUrl).then(res => res.ok ? res.json() : Promise.reject(`HTTP ${res.status}`))
+      ]);
+      
+      // Extract results
+      const [detailsResult, creditsResult, videosResult] = results;
+      
+      // ========== HANDLE DETAILS (always needed) ==========
+      if (detailsResult.status === "fulfilled") {
+        this.renderMovieDetails(detailsResult.value);
+      } else {
+        console.error("Details failed:", detailsResult.reason);
+        this.detailTitle.textContent = "Error loading movie";
+        this.detailOverview.textContent = "Failed to load movie details. Please try again.";
+      }
+      
+      // ========== HANDLE CREDITS (optional - still works if fails) ==========
+      if (creditsResult.status === "fulfilled") {
+        this.renderCredits(creditsResult.value);
+      } else {
+        console.error("Credits failed:", creditsResult.reason);
+        this.detailCast.innerHTML = "<li>Cast information unavailable</li>";
+      }
+      
+      // ========== HANDLE VIDEOS (optional - still works if fails) ==========
+      if (videosResult.status === "fulfilled") {
+        this.renderVideos(videosResult.value);
+      } else {
+        console.error("Videos failed:", videosResult.reason);
+        this.detailTrailer.innerHTML = "<p>Trailer not available</p>";
+      }
+      
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      this.detailTitle.textContent = "Error";
+      this.detailOverview.textContent = "Something went wrong. Please try selecting the movie again.";
+    } finally {
+      this.app.dataset.loading = "false";
+    }
   }
-  }
+
   // ========== PHASE 3: DETAIL PANEL METHODS ==========
 
   openDetailPanel() {
@@ -237,6 +294,68 @@ export default class SearchComponent {
   clearResults() {
     this.resultList.innerHTML = "";
     this.message.textContent = "";
+  }
+
+  // ========== RENDER MOVIE DETAILS ==========
+  renderMovieDetails(details) {
+    // Set title
+    this.detailTitle.textContent = details.title || "Unknown Title";
+    
+    // Set overview
+    this.detailOverview.textContent = details.overview || "No overview available.";
+    
+    // Render genres as badges
+    this.detailGenres.innerHTML = "";
+    if (details.genres && details.genres.length > 0) {
+      details.genres.forEach(genre => {
+        const badge = document.createElement("span");
+        badge.className = "genre-badge";
+        badge.textContent = genre.name;
+        this.detailGenres.appendChild(badge);
+      });
+    } else {
+      this.detailGenres.innerHTML = "<span>No genre information</span>";
+    }
+  }
+  
+  // ========== RENDER CREDITS (CAST & CREW) ==========
+  renderCredits(credits) {
+    this.detailCast.innerHTML = "";
+    
+    // Show top 5 cast members
+    const castMembers = credits.cast || [];
+    const topCast = castMembers.slice(0, 5);
+    
+    if (topCast.length > 0) {
+      topCast.forEach(actor => {
+        const li = document.createElement("li");
+        li.textContent = `${actor.name} as ${actor.character || "Unknown character"}`;
+        this.detailCast.appendChild(li);
+      });
+    } else {
+      this.detailCast.innerHTML = "<li>No cast information available</li>";
+    }
+  }
+  
+  // ========== RENDER VIDEOS (TRAILER) ==========
+  renderVideos(videos) {
+    this.detailTrailer.innerHTML = "";
+    
+    // Find a trailer (prefer YouTube trailers)
+    const trailer = videos.results?.find(
+      video => video.type === "Trailer" && video.site === "YouTube"
+    );
+    
+    if (trailer) {
+      const iframe = document.createElement("iframe");
+      iframe.src = `https://www.youtube.com/embed/${trailer.key}`;
+      iframe.title = "Movie Trailer";
+      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      iframe.allowFullscreen = true;
+      this.detailTrailer.appendChild(iframe);
+    } else {
+      this.detailTrailer.innerHTML = "<p>No trailer available</p>";
+    }
   }
 
   showMessage(msg) {
