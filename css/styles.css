@@ -315,18 +315,6 @@ body {
   color: rgba(255, 255, 255, 0.6);
 }
 
-.movie-year {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.movie-rating {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .movie-rating i {
   color: #ffc107;
   font-size: 0.7rem;
@@ -521,6 +509,17 @@ body {
   width: 100%;
   height: 300px;
   border-radius: 12px;
+}
+
+.no-trailer {
+  text-align: center;
+  padding: 2rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.no-trailer i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
 }
 
 /* ========== FOOTER ========== */
