@@ -11,7 +11,7 @@ export default class SearchComponent {
     this.app = document.getElementById("app");
     this.template = document.getElementById("movie-template");
 
-        // Detail panel elements (Phase 3)
+    // Detail panel elements (Phase 3)
     this.detailPanel = document.getElementById("detailPanel");
     this.detailTitle = document.getElementById("detailTitle");
     this.detailOverview = document.getElementById("detailOverview");
@@ -25,6 +25,7 @@ export default class SearchComponent {
     this.cache = new Map();
     this.controller = null;
     this.currentIndex = -1;
+    this.escapeHandler = null;
   }
 
   init() {
@@ -47,7 +48,7 @@ export default class SearchComponent {
     // Keyboard navigation
     this.input.addEventListener("keydown", (e) => this.handleKeydown(e));
 
-        // Close detail panel when X is clicked (Phase 3)
+    // Close detail panel when X is clicked (Phase 3)
     if (this.closeDetailBtn) {
       this.closeDetailBtn.addEventListener("click", () => {
         this.closeDetailPanel();
@@ -132,6 +133,12 @@ export default class SearchComponent {
 
       const li = clone.querySelector(".movie-item");
       li.dataset.id = movie.id;
+      
+      // ADD CLICK HANDLER
+      li.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.selectMovie(movie.id);
+      });
 
       frag.appendChild(clone);
     });
@@ -206,7 +213,7 @@ export default class SearchComponent {
     }
   }
 
-   async selectMovie(movieId) {
+  async selectMovie(movieId) {
     console.log(`🎬 Selected movie ID: ${movieId}`);
     
     // Open the detail panel
@@ -215,31 +222,28 @@ export default class SearchComponent {
     // Show loading state
     this.detailTitle.textContent = "Loading movie...";
     this.detailOverview.textContent = "Fetching data...";
-    this.detailGenres.innerHTML = "<li>Loading genres...</li>";
+    this.detailGenres.innerHTML = "Loading genres...";
     this.detailCast.innerHTML = "<li>Loading cast...</li>";
     this.detailTrailer.innerHTML = "<p>Loading trailer...</p>";
     
     // Show loading spinner on app
     this.app.dataset.loading = "true";
     
-    // ========== CONCURRENT FETCHING WITH PROMISE.ALLSETTLED ==========
-    // Three endpoints to fetch simultaneously
+    // CONCURRENT FETCHING WITH PROMISE.ALLSETTLED
     const detailsUrl = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${this.apiKey}`;
     const creditsUrl = `https://api.themoviedb.org/3/movie/${movieId}/credits?api_key=${this.apiKey}`;
     const videosUrl = `https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${this.apiKey}`;
     
     try {
-      // Fetch all three at the SAME TIME
       const results = await Promise.allSettled([
         fetch(detailsUrl).then(res => res.ok ? res.json() : Promise.reject(`HTTP ${res.status}`)),
         fetch(creditsUrl).then(res => res.ok ? res.json() : Promise.reject(`HTTP ${res.status}`)),
         fetch(videosUrl).then(res => res.ok ? res.json() : Promise.reject(`HTTP ${res.status}`))
       ]);
       
-      // Extract results
       const [detailsResult, creditsResult, videosResult] = results;
       
-      // ========== HANDLE DETAILS (always needed) ==========
+      // Handle Details
       if (detailsResult.status === "fulfilled") {
         this.renderMovieDetails(detailsResult.value);
       } else {
@@ -248,7 +252,7 @@ export default class SearchComponent {
         this.detailOverview.textContent = "Failed to load movie details. Please try again.";
       }
       
-      // ========== HANDLE CREDITS (optional - still works if fails) ==========
+      // Handle Credits
       if (creditsResult.status === "fulfilled") {
         this.renderCredits(creditsResult.value);
       } else {
@@ -256,7 +260,7 @@ export default class SearchComponent {
         this.detailCast.innerHTML = "<li>Cast information unavailable</li>";
       }
       
-      // ========== HANDLE VIDEOS (optional - still works if fails) ==========
+      // Handle Videos
       if (videosResult.status === "fulfilled") {
         this.renderVideos(videosResult.value);
       } else {
@@ -273,38 +277,10 @@ export default class SearchComponent {
     }
   }
 
-  // ========== PHASE 3: DETAIL PANEL METHODS ==========
-
-  openDetailPanel() {
-    this.detailPanel.style.display = "block";
-    document.body.classList.add("detail-open");
-  }
-
-  closeDetailPanel() {
-    this.detailPanel.style.display = "none";
-    document.body.classList.remove("detail-open");
-    
-    // Clear previous data
-    this.detailTitle.textContent = "Movie Title";
-    this.detailOverview.textContent = "";
-    this.detailGenres.innerHTML = "";
-    this.detailCast.innerHTML = "";
-    this.detailTrailer.innerHTML = "";
-  }
-  clearResults() {
-    this.resultList.innerHTML = "";
-    this.message.textContent = "";
-  }
-
-  // ========== RENDER MOVIE DETAILS ==========
   renderMovieDetails(details) {
-    // Set title
     this.detailTitle.textContent = details.title || "Unknown Title";
-    
-    // Set overview
     this.detailOverview.textContent = details.overview || "No overview available.";
     
-    // Render genres as badges
     this.detailGenres.innerHTML = "";
     if (details.genres && details.genres.length > 0) {
       details.genres.forEach(genre => {
@@ -314,15 +290,13 @@ export default class SearchComponent {
         this.detailGenres.appendChild(badge);
       });
     } else {
-      this.detailGenres.innerHTML = "<span>No genre information</span>";
+      this.detailGenres.innerHTML = "No genre information";
     }
   }
   
-  // ========== RENDER CREDITS (CAST & CREW) ==========
   renderCredits(credits) {
     this.detailCast.innerHTML = "";
     
-    // Show top 5 cast members
     const castMembers = credits.cast || [];
     const topCast = castMembers.slice(0, 5);
     
@@ -337,11 +311,9 @@ export default class SearchComponent {
     }
   }
   
-  // ========== RENDER VIDEOS (TRAILER) ==========
   renderVideos(videos) {
     this.detailTrailer.innerHTML = "";
     
-    // Find a trailer (prefer YouTube trailers)
     const trailer = videos.results?.find(
       video => video.type === "Trailer" && video.site === "YouTube"
     );
@@ -356,6 +328,42 @@ export default class SearchComponent {
     } else {
       this.detailTrailer.innerHTML = "<p>No trailer available</p>";
     }
+  }
+
+  openDetailPanel() {
+    this.detailPanel.style.display = "block";
+    document.body.classList.add("detail-open");
+    
+    // Close panel when pressing Escape key
+    this.escapeHandler = (e) => {
+      if (e.key === "Escape") {
+        this.closeDetailPanel();
+      }
+    };
+    document.addEventListener("keydown", this.escapeHandler);
+  }
+
+  closeDetailPanel() {
+    this.detailPanel.style.display = "none";
+    document.body.classList.remove("detail-open");
+    
+    // Remove Escape key listener
+    if (this.escapeHandler) {
+      document.removeEventListener("keydown", this.escapeHandler);
+      this.escapeHandler = null;
+    }
+    
+    // Clear previous data
+    this.detailTitle.textContent = "Movie Title";
+    this.detailOverview.textContent = "";
+    this.detailGenres.innerHTML = "";
+    this.detailCast.innerHTML = "";
+    this.detailTrailer.innerHTML = "";
+  }
+
+  clearResults() {
+    this.resultList.innerHTML = "";
+    this.message.textContent = "";
   }
 
   showMessage(msg) {
